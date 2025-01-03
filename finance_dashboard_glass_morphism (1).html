@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Finance Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: linear-gradient(145deg, #e0f5e9, #d1ecd8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #dashboard {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            width: 90%;
+        }
+        .chart {
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 30%;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="color: #2d6a4f;">Interactive Finance Performance Dashboard</h1>
+    <input type="file" id="fileInput" accept="application/json">
+    <div id="dashboard">
+        <div id="monthlySales" class="chart"></div>
+        <div id="profitMargin" class="chart"></div>
+        <div id="productPerformance" class="chart"></div>
+        <div id="cogsVsSales" class="chart"></div>
+        <div id="countrySegment" class="chart"></div>
+    </div>
+
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const data = JSON.parse(e.target.result);
+                    generateDashboard(data);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function generateDashboard(data) {
+            const salesData = {};
+            const profitData = {};
+            const productData = {};
+            const cogsData = [];
+
+            data.forEach(entry => {
+                const month = entry['Month Name'];
+                const product = entry['Product'];
+                const country = entry['Country'];
+
+                if (!salesData[month]) salesData[month] = 0;
+                salesData[month] += parseFloat(entry['Sales'].replace(/[^0-9.-]+/g, ""));
+
+                if (!profitData[month]) profitData[month] = 0;
+                profitData[month] += parseFloat(entry['Profit'].replace(/[^0-9.-]+/g, ""));
+
+                if (!productData[product]) productData[product] = 0;
+                productData[product] += parseFloat(entry['Profit'].replace(/[^0-9.-]+/g, ""));
+
+                cogsData.push({
+                    month,
+                    sales: parseFloat(entry['Sales'].replace(/[^0-9.-]+/g, "")),
+                    cogs: parseFloat(entry['COGS'].replace(/[^0-9.-]+/g, ""))
+                });
+            });
+
+            const salesMonths = Object.keys(salesData);
+            const salesValues = Object.values(salesData);
+            Plotly.newPlot('monthlySales', [{
+                x: salesMonths,
+                y: salesValues,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Sales'
+            }], {
+                title: 'Monthly Sales Trend',
+                xaxis: { title: 'Month' },
+                yaxis: { title: 'Sales ($)' }
+            });
+
+            const profitValues = Object.values(profitData);
+            Plotly.newPlot('profitMargin', [{
+                x: salesMonths,
+                y: profitValues,
+                type: 'bar',
+                name: 'Profit'
+            }], {
+                title: 'Profit Margin Analysis',
+                xaxis: { title: 'Month' },
+                yaxis: { title: 'Profit ($)' }
+            });
+
+            const productLabels = Object.keys(productData);
+            const productValues = Object.values(productData);
+            Plotly.newPlot('productPerformance', [{
+                labels: productLabels,
+                values: productValues,
+                type: 'pie'
+            }], {
+                title: 'Product Performance'
+            });
+
+            const cogsMonths = cogsData.map(d => d.month);
+            const cogsSales = cogsData.map(d => d.sales);
+            const cogsCOGS = cogsData.map(d => d.cogs);
+            Plotly.newPlot('cogsVsSales', [
+                {
+                    x: cogsMonths,
+                    y: cogsSales,
+                    type: 'bar',
+                    name: 'Sales'
+                },
+                {
+                    x: cogsMonths,
+                    y: cogsCOGS,
+                    type: 'bar',
+                    name: 'COGS'
+                }
+            ], {
+                title: 'COGS vs Sales Comparison',
+                barmode: 'group',
+                xaxis: { title: 'Month' },
+                yaxis: { title: 'Amount ($)' }
+            });
+        }
+    </script>
+</body>
+</html>
